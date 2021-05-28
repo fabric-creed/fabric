@@ -20,9 +20,9 @@ package credentials
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"fmt"
+	"github.com/cetcxinlian/cryptogm/sm2"
+	"github.com/cetcxinlian/cryptogm/tls"
+	"github.com/cetcxinlian/cryptogm/x509"
 	"io/ioutil"
 	"net"
 
@@ -132,6 +132,19 @@ func appendH2ToNextProtos(ps []string) []string {
 func NewTLS(c *tls.Config) TransportCredentials {
 	tc := &tlsCreds{cloneTLSConfig(c)}
 	tc.config.NextProtos = appendH2ToNextProtos(tc.config.NextProtos)
+	if len(c.Certificates) > 0 {
+		_, ok := c.Certificates[0].PrivateKey.(*sm2.PrivateKey)
+		if ok {
+			tc.config.GMSupport = &tls.GMSupport{}
+		}
+	} else {
+		certs := c.RootCAs.GetCerts()
+		if len(certs) > 0 {
+			if _, ok := certs[0].PublicKey.(*sm2.PublicKey) {
+				tc.config.GMSupport = &tls.GMSupport{}
+			}
+		}
+	}
 	return tc
 }
 
@@ -160,9 +173,15 @@ func NewClientTLSFromFile(certFile, serverNameOverride string) (TransportCredent
 	if err != nil {
 		return nil, err
 	}
+	cert, err := x509.Pem2Cert(b)
+	if err != nil {
+		return nil, err
+	}
 	cp := x509.NewCertPool()
-	if !cp.AppendCertsFromPEM(b) {
-		return nil, fmt.Errorf("credentials: failed to append certificates")
+	cp.AddCert(cert)
+	_, ok := cert.PublicKey.(*sm2.PublicKey)
+	if ok {
+		return NewTLS(&tls.Config{ServerName: serverNameOverride, RootCAs: cp, GMSupport: &tls.GMSupport{}}), nil
 	}
 	return NewTLS(&tls.Config{ServerName: serverNameOverride, RootCAs: cp}), nil
 }
@@ -178,6 +197,10 @@ func NewServerTLSFromFile(certFile, keyFile string) (TransportCredentials, error
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, err
+	}
+	_, ok := cert.PublicKey.(*sm2.PublicKey)
+	if ok {
+		return NewTLS(&tls.Config{Certificates: []tls.Certificate{cert}, GMSupport: &tls.GMSupport{}}), nil
 	}
 	return NewTLS(&tls.Config{Certificates: []tls.Certificate{cert}}), nil
 }
