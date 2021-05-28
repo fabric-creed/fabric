@@ -10,10 +10,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/pem"
 	"net"
 
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/credentials"
@@ -35,7 +35,6 @@ func AddPemToCertPool(pemCerts []byte, pool *x509.CertPool) error {
 // parse PEM-encoded certs
 func pemToX509Certs(pemCerts []byte) ([]*x509.Certificate, error) {
 	var certs []*x509.Certificate
-
 	// it's possible that multiple certs are encoded
 	for len(pemCerts) > 0 {
 		var block *pem.Block

@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package deliverservice
 
 import (
-	"crypto/x509"
 	"io/ioutil"
 	"time"
 
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/hyperledger/fabric/core/config"
 	"github.com/hyperledger/fabric/internal/pkg/comm"
 	"github.com/hyperledger/fabric/internal/pkg/peer/orderers"

@@ -9,10 +9,10 @@ package orderers
 import (
 	"bytes"
 	"crypto/sha256"
-	"crypto/x509"
 	"math/rand"
 	"sync"
 
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/internal/pkg/comm"
 

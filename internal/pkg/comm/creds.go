@@ -8,13 +8,13 @@ package comm
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"net"
 	"sync"
 	"time"
 
+	"github.com/cetcxinlian/cryptogm/tls"
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/hyperledger/fabric/common/flogging"
 	"google.golang.org/grpc/credentials"
 )
@@ -34,12 +34,17 @@ var (
 // NewServerTransportCredentials returns a new initialized
 // grpc/credentials.TransportCredentials
 func NewServerTransportCredentials(
-	serverConfig *TLSConfig,
+	serverConfig *tls.Config,
 	logger *flogging.FabricLogger) credentials.TransportCredentials {
 	// NOTE: unlike the default grpc/credentials implementation, we do not
 	// clone the tls.Config which allows us to update it dynamically
-	serverConfig.config.NextProtos = alpnProtoStr
-	serverConfig.config.MinVersion = tls.VersionTLS12
+	serverConfig.NextProtos = alpnProtoStr
+	// GMTLS support
+	if serverConfig.GMSupport != nil {
+		serverConfig.MinVersion = tls.VersionGMSSL
+	} else {
+		serverConfig.MinVersion = tls.VersionTLS12
+	}
 
 	if logger == nil {
 		logger = tlsClientLogger
@@ -52,7 +57,7 @@ func NewServerTransportCredentials(
 
 // serverCreds is an implementation of grpc/credentials.TransportCredentials.
 type serverCreds struct {
-	serverConfig *TLSConfig
+	serverConfig *tls.Config
 	logger       *flogging.FabricLogger
 }
 
@@ -100,9 +105,8 @@ func (sc *serverCreds) ClientHandshake(context.Context,
 
 // ServerHandshake does the authentication handshake for servers.
 func (sc *serverCreds) ServerHandshake(rawConn net.Conn) (net.Conn, credentials.AuthInfo, error) {
-	serverConfig := sc.serverConfig.Config()
 
-	conn := tls.Server(rawConn, &serverConfig)
+	conn := tls.Server(rawConn, sc.serverConfig)
 	l := sc.logger.With("remote address", conn.RemoteAddr().String())
 	start := time.Now()
 	if err := conn.Handshake(); err != nil {
@@ -123,9 +127,7 @@ func (sc *serverCreds) Info() credentials.ProtocolInfo {
 
 // Clone makes a copy of this TransportCredentials.
 func (sc *serverCreds) Clone() credentials.TransportCredentials {
-	config := sc.serverConfig.Config()
-	serverConfig := NewTLSConfig(&config)
-	return NewServerTransportCredentials(serverConfig, sc.logger)
+	return NewServerTransportCredentials(sc.serverConfig, sc.logger)
 }
 
 // OverrideServerName overrides the server name used to verify the hostname

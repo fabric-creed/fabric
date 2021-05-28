@@ -8,10 +8,10 @@ package blocksprovider
 
 import (
 	"context"
-	"crypto/x509"
 	"math"
 	"time"
 
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/hyperledger/fabric-protos-go/common"
 	"github.com/hyperledger/fabric-protos-go/gossip"
 	"github.com/hyperledger/fabric-protos-go/orderer"
