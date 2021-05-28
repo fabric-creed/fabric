@@ -8,9 +8,9 @@ package chaincode
 
 import (
 	"context"
-	"crypto/tls"
 	"time"
 
+	"github.com/cetcxinlian/cryptogm/tls"
 	"github.com/golang/protobuf/proto"
 	cb "github.com/hyperledger/fabric-protos-go/common"
 	pb "github.com/hyperledger/fabric-protos-go/peer"

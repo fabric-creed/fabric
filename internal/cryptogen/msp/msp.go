@@ -6,11 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 package msp
 
 import (
-	"crypto/x509"
 	"encoding/pem"
 	"os"
 	"path/filepath"
 
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/hyperledger/fabric/internal/cryptogen/ca"
 	"github.com/hyperledger/fabric/internal/cryptogen/csp"
 	fabricmsp "github.com/hyperledger/fabric/msp"
@@ -47,6 +47,7 @@ func GenerateLocalMSP(
 	tlsCA *ca.CA,
 	nodeType int,
 	nodeOUs bool,
+	isGm bool,
 ) error {
 
 	// create folder structure
@@ -70,7 +71,7 @@ func GenerateLocalMSP(
 	keystore := filepath.Join(mspDir, "keystore")
 
 	// generate private key
-	priv, err := csp.GeneratePrivateKey(keystore)
+	_, pub, err := csp.GeneratePrivateKey(keystore, isGm)
 	if err != nil {
 		return err
 	}
@@ -85,7 +86,7 @@ func GenerateLocalMSP(
 		name,
 		ous,
 		nil,
-		&priv.PublicKey,
+		pub,
 		x509.KeyUsageDigitalSignature,
 		[]x509.ExtKeyUsage{},
 	)
@@ -137,7 +138,7 @@ func GenerateLocalMSP(
 	*/
 
 	// generate private key
-	tlsPrivKey, err := csp.GeneratePrivateKey(tlsDir)
+	_, pub, err = csp.GeneratePrivateKey(tlsDir, isGm)
 	if err != nil {
 		return err
 	}
@@ -148,7 +149,7 @@ func GenerateLocalMSP(
 		name,
 		nil,
 		sans,
-		&tlsPrivKey.PublicKey,
+		pub,
 		x509.KeyUsageDigitalSignature|x509.KeyUsageKeyEncipherment,
 		[]x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth,
 			x509.ExtKeyUsageClientAuth},
@@ -185,6 +186,7 @@ func GenerateVerifyingMSP(
 	signCA,
 	tlsCA *ca.CA,
 	nodeOUs bool,
+	isGm bool,
 ) error {
 
 	// create folder structure and write artifacts to proper locations
@@ -229,7 +231,7 @@ func GenerateVerifyingMSP(
 	if err != nil {
 		return errors.WithMessage(err, "failed to create keystore directory")
 	}
-	priv, err := csp.GeneratePrivateKey(ksDir)
+	_, pub, err := csp.GeneratePrivateKey(ksDir, isGm)
 	if err != nil {
 		return err
 	}
@@ -238,7 +240,7 @@ func GenerateVerifyingMSP(
 		signCA.Name,
 		nil,
 		nil,
-		&priv.PublicKey,
+		pub,
 		x509.KeyUsageDigitalSignature,
 		[]x509.ExtKeyUsage{},
 	)
@@ -286,7 +288,7 @@ func keyExport(keystore, output string) error {
 }
 
 func pemExport(path, pemType string, bytes []byte) error {
-	//write pem out to file
+	// write pem out to file
 	file, err := os.Create(path)
 	if err != nil {
 		return err

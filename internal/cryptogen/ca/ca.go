@@ -11,9 +11,9 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"github.com/cetcxinlian/cryptogm/sm2"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/hyperledger/fabric/internal/cryptogen/csp"
 	"github.com/pkg/errors"
 )
@@ -50,6 +51,7 @@ func NewCA(
 	orgUnit,
 	streetAddress,
 	postalCode string,
+	isGm bool,
 ) (*CA, error) {
 
 	var ca *CA
@@ -59,13 +61,13 @@ func NewCA(
 		return nil, err
 	}
 
-	priv, err := csp.GeneratePrivateKey(baseDir)
+	priv, pub, err := csp.GeneratePrivateKey(baseDir, isGm)
 	if err != nil {
 		return nil, err
 	}
 
 	template := x509Template()
-	//this is a CA
+	// this is a CA
 	template.IsCA = true
 	template.KeyUsage |= x509.KeyUsageDigitalSignature |
 		x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign |
@@ -75,7 +77,7 @@ func NewCA(
 		x509.ExtKeyUsageServerAuth,
 	}
 
-	//set the organization for the subject
+	// set the organization for the subject
 	subject := subjectTemplateAdditional(country, province, locality, orgUnit, streetAddress, postalCode)
 	subject.Organization = []string{org}
 	subject.CommonName = name
@@ -83,22 +85,28 @@ func NewCA(
 	template.Subject = subject
 	template.SubjectKeyId = computeSKI(priv)
 
-	x509Cert, err := genCertificateECDSA(
+	x509Cert, err := genCertificate(
 		baseDir,
 		name,
 		&template,
 		&template,
-		&priv.PublicKey,
+		pub,
 		priv,
 	)
 	if err != nil {
 		return nil, err
 	}
+	var caSigner crypto.Signer
+	switch prik := priv.(type) {
+	case *ecdsa.PrivateKey:
+		caSigner = prik
+	case *sm2.PrivateKey:
+		caSigner = prik
+	}
+
 	ca = &CA{
-		Name: name,
-		Signer: &csp.ECDSASigner{
-			PrivateKey: priv,
-		},
+		Name:               name,
+		Signer:             caSigner,
 		SignCert:           x509Cert,
 		Country:            country,
 		Province:           province,
@@ -118,7 +126,7 @@ func (ca *CA) SignCertificate(
 	name string,
 	orgUnits,
 	alternateNames []string,
-	pub *ecdsa.PublicKey,
+	pub interface{},
 	ku x509.KeyUsage,
 	eku []x509.ExtKeyUsage,
 ) (*x509.Certificate, error) {
@@ -127,7 +135,7 @@ func (ca *CA) SignCertificate(
 	template.KeyUsage = ku
 	template.ExtKeyUsage = eku
 
-	//set the organization for the subject
+	// set the organization for the subject
 	subject := subjectTemplateAdditional(
 		ca.Country,
 		ca.Province,
@@ -151,7 +159,7 @@ func (ca *CA) SignCertificate(
 		}
 	}
 
-	cert, err := genCertificateECDSA(
+	cert, err := genCertificate(
 		baseDir,
 		name,
 		&template,
@@ -168,13 +176,25 @@ func (ca *CA) SignCertificate(
 }
 
 // compute Subject Key Identifier
-func computeSKI(privKey *ecdsa.PrivateKey) []byte {
-	// Marshall the public key
-	raw := elliptic.Marshal(privKey.Curve, privKey.PublicKey.X, privKey.PublicKey.Y)
+func computeSKI(key interface{}) []byte {
+	switch privKey := key.(type) {
+	case *ecdsa.PrivateKey:
+		// Marshall the public key
+		raw := elliptic.Marshal(privKey.Curve, privKey.PublicKey.X, privKey.PublicKey.Y)
 
-	// Hash it
-	hash := sha256.Sum256(raw)
-	return hash[:]
+		// Hash it
+		hash := sha256.Sum256(raw)
+		return hash[:]
+	case *sm2.PrivateKey:
+		// Marshall the public key
+		raw := elliptic.Marshal(privKey.Curve, privKey.PublicKey.X, privKey.PublicKey.Y)
+
+		// Hash it
+		hash := sha256.Sum256(raw)
+		return hash[:]
+	default:
+		panic("error key type")
+	}
 }
 
 // default template for X509 subject
@@ -226,11 +246,11 @@ func x509Template() x509.Certificate {
 	serialNumber, _ := rand.Int(rand.Reader, serialNumberLimit)
 
 	// set expiry to around 10 years
-	expiry := 3650 * 24 * time.Hour
+	expiry := 36500 * 24 * time.Hour
 	// round minute and backdate 5 minutes
 	notBefore := time.Now().Round(time.Minute).Add(-5 * time.Minute).UTC()
 
-	//basic template to use
+	// basic template to use
 	x509 := x509.Certificate{
 		SerialNumber:          serialNumber,
 		NotBefore:             notBefore,
@@ -242,28 +262,28 @@ func x509Template() x509.Certificate {
 }
 
 // generate a signed X509 certificate using ECDSA
-func genCertificateECDSA(
+func genCertificate(
 	baseDir,
 	name string,
 	template,
 	parent *x509.Certificate,
-	pub *ecdsa.PublicKey,
+	pub interface{},
 	priv interface{},
 ) (*x509.Certificate, error) {
 
-	//create the x509 public cert
+	// create the x509 public cert
 	certBytes, err := x509.CreateCertificate(rand.Reader, template, parent, pub, priv)
 	if err != nil {
 		return nil, err
 	}
 
-	//write cert out to file
+	// write cert out to file
 	fileName := filepath.Join(baseDir, name+"-cert.pem")
 	certFile, err := os.Create(fileName)
 	if err != nil {
 		return nil, err
 	}
-	//pem encode the cert
+	// pem encode the cert
 	err = pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
 	certFile.Close()
 	if err != nil {

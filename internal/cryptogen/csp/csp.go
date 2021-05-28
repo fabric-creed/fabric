@@ -10,7 +10,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/x509"
 	"encoding/asn1"
 	"encoding/pem"
 	"io"
@@ -20,6 +19,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cetcxinlian/cryptogm/sm2"
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/pkg/errors"
 )
 
@@ -75,16 +76,27 @@ func parsePrivateKeyPEM(rawKey []byte) (*ecdsa.PrivateKey, error) {
 
 // GeneratePrivateKey creates an EC private key using a P-256 curve and stores
 // it in keystorePath.
-func GeneratePrivateKey(keystorePath string) (*ecdsa.PrivateKey, error) {
+func GeneratePrivateKey(keystorePath string, isGm bool) (priv interface{}, pub interface{}, err error) {
 
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to generate private key")
+	if isGm {
+		sm2Priv, err := sm2.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, nil, errors.WithMessage(err, "failed to generate sm private key")
+		}
+		priv = sm2Priv
+		pub = &sm2Priv.PublicKey
+	} else {
+		ecdsaPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			return nil, nil, errors.WithMessage(err, "failed to generate ec private key")
+		}
+		priv = ecdsaPriv
+		pub = &ecdsaPriv.PublicKey
 	}
 
-	pkcs8Encoded, err := x509.MarshalPKCS8PrivateKey(priv)
+	pkcs8Encoded, err := x509.MarshalECPrivateKey(priv)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to marshal private key")
+		return nil, nil, errors.WithMessage(err, "failed to marshal private key")
 	}
 
 	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: pkcs8Encoded})
@@ -92,10 +104,10 @@ func GeneratePrivateKey(keystorePath string) (*ecdsa.PrivateKey, error) {
 	keyFile := filepath.Join(keystorePath, "priv_sk")
 	err = ioutil.WriteFile(keyFile, pemEncoded, 0600)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to save private key to file %s", keyFile)
+		return nil, nil, errors.WithMessagef(err, "failed to save private key to file %s", keyFile)
 	}
 
-	return priv, err
+	return priv, pub, err
 }
 
 /**
