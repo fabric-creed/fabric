@@ -7,13 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package util
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"net"
 	"strconv"
 	"time"
 
+	"github.com/cetcxinlian/cryptogm/tls"
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/hyperledger/fabric/common/crypto/tlsgen"
 	"github.com/hyperledger/fabric/gossip/api"
 	"github.com/hyperledger/fabric/gossip/common"
