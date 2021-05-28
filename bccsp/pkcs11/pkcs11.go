@@ -10,10 +10,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/asn1"
 	"encoding/hex"
 	"fmt"
+	"github.com/cetcxinlian/cryptogm/x509"
 	"math/big"
 	"os"
 	"regexp"
@@ -523,7 +523,7 @@ func (csp *impl) generateECKey(curve asn1.ObjectIdentifier, ephemeral bool) (ski
 		return nil, nil, fmt.Errorf("P11: set-ID-to-SKI[private] failed [%s]", err)
 	}
 
-	//Set CKA_Modifible to false for both public key and private keys
+	// Set CKA_Modifible to false for both public key and private keys
 	if csp.immutable {
 		setCKAModifiable := []*pkcs11.Attribute{
 			pkcs11.NewAttribute(pkcs11.CKA_MODIFIABLE, false),
@@ -846,8 +846,8 @@ func nextIDCtr() *big.Int {
 func FindPKCS11Lib() (lib, pin, label string) {
 	if lib = os.Getenv("PKCS11_LIB"); lib == "" {
 		possibilities := []string{
-			"/usr/lib/softhsm/libsofthsm2.so",                  //Debian
-			"/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so", //Ubuntu
+			"/usr/lib/softhsm/libsofthsm2.so",                  // Debian
+			"/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so", // Ubuntu
 		}
 		for _, path := range possibilities {
 			if _, err := os.Stat(path); !os.IsNotExist(err) {
