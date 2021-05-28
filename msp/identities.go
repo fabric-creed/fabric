@@ -9,13 +9,13 @@ package msp
 import (
 	"crypto"
 	"crypto/rand"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/bccsp"
@@ -232,7 +232,7 @@ type signingidentity struct {
 }
 
 func newSigningIdentity(cert *x509.Certificate, pk bccsp.Key, signer crypto.Signer, msp *bccspmsp) (SigningIdentity, error) {
-	//mspIdentityLogger.Infof("Creating signing identity instance for ID %s", id)
+	// mspIdentityLogger.Infof("Creating signing identity instance for ID %s", id)
 	mspId, err := newIdentity(cert, pk, msp)
 	if err != nil {
 		return nil, err
@@ -250,7 +250,7 @@ func newSigningIdentity(cert *x509.Certificate, pk bccsp.Key, signer crypto.Sign
 
 // Sign produces a signature over msg, signed by this instance
 func (id *signingidentity) Sign(msg []byte) ([]byte, error) {
-	//mspIdentityLogger.Infof("Signing message")
+	// mspIdentityLogger.Infof("Signing message")
 
 	// Compute Hash
 	hashOpt, err := id.getHashOpt(id.msp.cryptoConfig.SignatureHashFamily)
