@@ -10,7 +10,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/x509"
 	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
@@ -20,6 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/hyperledger/fabric/internal/cryptogen/csp"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,7 +30,7 @@ func TestLoadPrivateKey(t *testing.T) {
 		t.Fatalf("Failed to create test directory: %s", err)
 	}
 	defer os.RemoveAll(testDir)
-	priv, err := csp.GeneratePrivateKey(testDir)
+	priv, _, err := csp.GeneratePrivateKey(testDir, true)
 	if err != nil {
 		t.Fatalf("Failed to generate private key: %s", err)
 	}
@@ -57,7 +57,7 @@ func TestLoadPrivateKey_BadPEM(t *testing.T) {
 		t.Fatalf("Failed to generate RSA key: %s", err)
 	}
 
-	pkcs8Encoded, err := x509.MarshalPKCS8PrivateKey(rsaKey)
+	pkcs8Encoded, err := x509.MarshalECPrivateKey(rsaKey)
 	if err != nil {
 		t.Fatalf("Failed to PKCS8 encode RSA private key: %s", err)
 	}
@@ -114,13 +114,13 @@ func TestGeneratePrivateKey(t *testing.T) {
 	defer os.RemoveAll(testDir)
 
 	expectedFile := filepath.Join(testDir, "priv_sk")
-	priv, err := csp.GeneratePrivateKey(testDir)
+	priv, _, err := csp.GeneratePrivateKey(testDir, true)
 	assert.NoError(t, err, "Failed to generate private key")
 	assert.NotNil(t, priv, "Should have returned an *ecdsa.Key")
 	assert.Equal(t, true, checkForFile(expectedFile),
 		"Expected to find private key file")
 
-	_, err = csp.GeneratePrivateKey("notExist")
+	_, _, err = csp.GeneratePrivateKey("notExist", true)
 	assert.Contains(t, err.Error(), "no such file or directory")
 }
 

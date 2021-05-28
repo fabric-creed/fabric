@@ -5,9 +5,9 @@ package internal
 
 import (
 	"context"
-	"crypto/tls"
 	"time"
 
+	"github.com/cetcxinlian/cryptogm/tls"
 	peerpb "github.com/hyperledger/fabric-protos-go/peer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

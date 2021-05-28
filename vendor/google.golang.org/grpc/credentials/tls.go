@@ -140,7 +140,7 @@ func NewTLS(c *tls.Config) TransportCredentials {
 	} else {
 		certs := c.RootCAs.GetCerts()
 		if len(certs) > 0 {
-			if _, ok := certs[0].PublicKey.(*sm2.PublicKey) {
+			if _, ok := certs[0].PublicKey.(*sm2.PublicKey); ok {
 				tc.config.GMSupport = &tls.GMSupport{}
 			}
 		}
@@ -198,7 +198,7 @@ func NewServerTLSFromFile(certFile, keyFile string) (TransportCredentials, error
 	if err != nil {
 		return nil, err
 	}
-	_, ok := cert.PublicKey.(*sm2.PublicKey)
+	_, ok := cert.PrivateKey.(*sm2.PrivateKey)
 	if ok {
 		return NewTLS(&tls.Config{Certificates: []tls.Certificate{cert}, GMSupport: &tls.GMSupport{}}), nil
 	}

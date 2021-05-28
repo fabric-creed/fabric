@@ -8,9 +8,9 @@ package signer
 
 import (
 	"crypto"
-	"crypto/x509"
 	"io"
 
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
 )

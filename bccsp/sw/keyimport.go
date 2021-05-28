@@ -9,10 +9,10 @@ package sw
 import (
 	"crypto/ecdsa"
 	"crypto/rsa"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"github.com/cetcxinlian/cryptogm/sm2"
+	"github.com/cetcxinlian/cryptogm/x509"
 	"reflect"
 
 	"github.com/hyperledger/fabric/bccsp"

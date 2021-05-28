@@ -123,6 +123,7 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 				grpcServer.tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 				// if we have client root CAs, create a certPool
 				if len(secureConfig.ClientRootCAs) > 0 {
+					grpcServer.clientRootCAs = make(map[string]*x509.Certificate)
 					grpcServer.tlsConfig.ClientCAs = x509.NewCertPool()
 					for _, clientRootCA := range secureConfig.ClientRootCAs {
 						err = grpcServer.appendClientRootCA(clientRootCA)
