@@ -26,8 +26,8 @@ import (
 
 // LoadPrivateKey loads a private key from a file in keystorePath.  It looks
 // for a file ending in "_sk" and expects a PEM-encoded PKCS8 EC private key.
-func LoadPrivateKey(keystorePath string) (*ecdsa.PrivateKey, error) {
-	var priv *ecdsa.PrivateKey
+func LoadPrivateKey(keystorePath string) (crypto.Signer, error) {
+	var priv crypto.Signer
 
 	walkFunc := func(path string, info os.FileInfo, pathErr error) error {
 
@@ -56,22 +56,25 @@ func LoadPrivateKey(keystorePath string) (*ecdsa.PrivateKey, error) {
 	return priv, err
 }
 
-func parsePrivateKeyPEM(rawKey []byte) (*ecdsa.PrivateKey, error) {
+func parsePrivateKeyPEM(rawKey []byte) (crypto.Signer, error) {
 	block, _ := pem.Decode(rawKey)
 	if block == nil {
 		return nil, errors.New("bytes are not PEM encoded")
 	}
 
-	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	key, err := x509.ParseECPrivateKey(block.Bytes)
 	if err != nil {
-		return nil, errors.WithMessage(err, "pem bytes are not PKCS8 encoded ")
+		return nil, errors.WithMessage(err, "pem bytes are not EC private key encoded ")
 	}
 
-	priv, ok := key.(*ecdsa.PrivateKey)
-	if !ok {
+	switch key.(type) {
+	case *ecdsa.PrivateKey:
+		return key.(*ecdsa.PrivateKey), nil
+	case *sm2.PrivateKey:
+		return key.(*sm2.PrivateKey), nil
+	default:
 		return nil, errors.New("pem bytes do not contain an EC private key")
 	}
-	return priv, nil
 }
 
 // GeneratePrivateKey creates an EC private key using a P-256 curve and stores

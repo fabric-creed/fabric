@@ -152,7 +152,7 @@ type certificate struct {
 
 type tbsCertificate struct {
 	Raw                asn1.RawContent
-	Version            int              `asn1:"optional,explicit,default:0,tag:0"`
+	Version            int `asn1:"optional,explicit,default:0,tag:0"`
 	SerialNumber       *big.Int
 	SignatureAlgorithm pkix.AlgorithmIdentifier
 	Issuer             asn1.RawValue
@@ -338,7 +338,7 @@ var (
 	// to produce certificates with this OID.
 	oidISOSignatureSHA1WithRSA = asn1.ObjectIdentifier{1, 3, 14, 3, 2, 29}
 
-	//oid gm
+	// oid gm
 	oidSignatureSM2WithSM3    = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 501}
 	oidSignatureSM2WithSHA1   = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 502}
 	oidSignatureSM2WithSHA256 = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 503}
@@ -350,7 +350,7 @@ var signatureAlgorithmDetails = []struct {
 	pubKeyAlgo PublicKeyAlgorithm
 	hash       crypto.Hash
 }{
-	{MD2WithRSA, oidSignatureMD2WithRSA, RSA, crypto.Hash(0) /* no value for MD2 */ },
+	{MD2WithRSA, oidSignatureMD2WithRSA, RSA, crypto.Hash(0) /* no value for MD2 */},
 	{MD5WithRSA, oidSignatureMD5WithRSA, RSA, crypto.MD5},
 	{SHA1WithRSA, oidSignatureSHA1WithRSA, RSA, crypto.SHA1},
 	{SHA1WithRSA, oidISOSignatureSHA1WithRSA, RSA, crypto.SHA1},
@@ -496,7 +496,7 @@ var (
 	oidPublicKeyRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
 	oidPublicKeyDSA   = asn1.ObjectIdentifier{1, 2, 840, 10040, 4, 1}
 	oidPublicKeyECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
-	oidPublicKeySM2   = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1} //TODO this value is specified no where, need to confirm next
+	oidPublicKeySM2   = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1} // TODO this value is specified no where, need to confirm next
 )
 
 func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) PublicKeyAlgorithm {
@@ -573,7 +573,7 @@ func oidFromNamedCurve(curve elliptic.Curve) (asn1.ObjectIdentifier, bool) {
 type KeyUsage int
 
 const (
-	KeyUsageDigitalSignature  KeyUsage = 1 << iota
+	KeyUsageDigitalSignature KeyUsage = 1 << iota
 	KeyUsageContentCommitment
 	KeyUsageKeyEncipherment
 	KeyUsageDataEncipherment
@@ -616,7 +616,7 @@ var (
 type ExtKeyUsage int
 
 const (
-	ExtKeyUsageAny                        ExtKeyUsage = iota
+	ExtKeyUsageAny ExtKeyUsage = iota
 	ExtKeyUsageServerAuth
 	ExtKeyUsageClientAuth
 	ExtKeyUsageCodeSigning
@@ -878,7 +878,7 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 
 	switch algo {
 	case SM2WithSM3:
-		//Do nothing here, just in case not go into default
+		// Do nothing here, just in case not go into default
 	case SHA1WithRSA, DSAWithSHA1, ECDSAWithSHA1, SM2WithSHA1:
 		hashType = crypto.SHA1
 	case SHA256WithRSA, SHA256WithRSAPSS, DSAWithSHA256, ECDSAWithSHA256, SM2WithSHA256:
@@ -894,9 +894,9 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 	}
 
 	var h hash.Hash
-	if(algo==SM2WithSM3){
+	if algo == SM2WithSM3 {
 		h = sm3.New()
-	}else{
+	} else {
 		if !hashType.Available() {
 			return ErrUnsupportedAlgorithm
 		}
@@ -1771,11 +1771,11 @@ func signingParamsForPublicKey(pub interface{}, requestedSigAlgo SignatureAlgori
 		pubType = SM2
 		switch pub.Curve {
 		case sm2.P256Sm2():
-			//hashFunc = tjSM3
+			// hashFunc = tjSM3
 			hashFunc = 255
 			sigAlgo.Algorithm = oidSignatureSM2WithSM3
-			//hashFunc = crypto.SHA256
-			//sigAlgo.Algorithm = oidSignatureSM2WithSHA256
+			// hashFunc = crypto.SHA256
+			// sigAlgo.Algorithm = oidSignatureSM2WithSHA256
 		default:
 			err = errors.New("x509: SM2 unknown elliptic curve")
 		}
@@ -1920,9 +1920,9 @@ func CreateCertificate(rand io.Reader, template, parent *Certificate, pub, priv 
 	c.Raw = tbsCertContents
 
 	var h hash.Hash
-	if(hashFunc == 255){
+	if hashFunc == 255 {
 		h = sm3.New()
-	}else{
+	} else {
 		h = hashFunc.New()
 	}
 
@@ -2324,7 +2324,6 @@ func CreateCertificateRequest(rand io.Reader, template *CertificateRequest, priv
 	}
 	tbsCSR.Raw = tbsCSRContents
 
-
 	var signature []byte
 	switch key.(type) {
 	case *sm2.PrivateKey:
@@ -2341,7 +2340,6 @@ func CreateCertificateRequest(rand io.Reader, template *CertificateRequest, priv
 			return
 		}
 	}
-
 
 	return asn1.Marshal(certificateRequest{
 		TBSCSR:             tbsCSR,
@@ -2385,6 +2383,10 @@ func parseCertificateRequest(in *certificateRequest) (*CertificateRequest, error
 	}
 
 	var err error
+	if out.PublicKeyAlgorithm == ECDSA && (out.SignatureAlgorithm == SM2WithSHA256 ||
+		out.SignatureAlgorithm == SM2WithSHA1 || out.SignatureAlgorithm == SM2WithSM3) {
+		out.PublicKeyAlgorithm = SM2
+	}
 	out.PublicKey, err = parsePublicKey(out.PublicKeyAlgorithm, &in.TBSCSR.PublicKey)
 	if err != nil {
 		return nil, err

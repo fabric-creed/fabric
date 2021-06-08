@@ -252,7 +252,7 @@ $(foreach platform, $(RELEASE_PLATFORMS), $(RELEASE_EXES:%=release/$(platform)/b
 	$(eval GOARCH = $(word 2,$(subst -, ,$(platform))))
 	@echo "Building $@ for $(GOOS)-$(GOARCH)"
 	mkdir -p $(@D)
-	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o $@ -tags "$(GO_TAGS)" -ldflags "$(GO_LDFLAGS)" $(pkgmap.$(@F))
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -mod=vendor -o $@ -tags "$(GO_TAGS)" -ldflags "$(GO_LDFLAGS)" $(pkgmap.$(@F))
 
 .PHONY: dist
 dist: dist-clean dist/$(MARCH)
