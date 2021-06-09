@@ -1117,20 +1117,21 @@ func TestUpdateTLSCert(t *testing.T) {
 func TestCipherSuites(t *testing.T) {
 	t.Parallel()
 
-	certPEM, err := ioutil.ReadFile(filepath.Join("testdata", "certs", "Org1-server1-cert.pem"))
+	certPEM, err := ioutil.ReadFile(filepath.Join("testdata", "gm", "tls", "server.crt"))
 	assert.NoError(t, err)
-	keyPEM, err := ioutil.ReadFile(filepath.Join("testdata", "certs", "Org1-server1-key.pem"))
+	keyPEM, err := ioutil.ReadFile(filepath.Join("testdata", "gm", "tls", "server.key"))
 	assert.NoError(t, err)
-	caPEM, err := ioutil.ReadFile(filepath.Join("testdata", "certs", "Org1-cert.pem"))
+	caPEM, err := ioutil.ReadFile(filepath.Join("testdata", "gm", "tls", "ca.crt"))
 	assert.NoError(t, err)
 	certPool, err := createCertPool([][]byte{caPEM})
 	assert.NoError(t, err)
 
 	serverConfig := comm.ServerConfig{
 		SecOpts: comm.SecureOptions{
-			Certificate: certPEM,
-			Key:         keyPEM,
-			UseTLS:      true,
+			Certificate:  certPEM,
+			Key:          keyPEM,
+			UseTLS:       true,
+			CipherSuites: comm.DefaultGMTLSCipherSuites,
 		}}
 
 	// fabricDefaultCipherSuite := func(cipher uint16) bool {
@@ -1142,7 +1143,7 @@ func TestCipherSuites(t *testing.T) {
 	// 	return false
 	// }
 
-	var otherCipherSuites []uint16
+	// var otherCipherSuites []uint16
 	// for _, cipher := range append(tls.CipherSuites(), tls.InsecureCipherSuites()...) {
 	// 	if !fabricDefaultCipherSuite(cipher.ID) {
 	// 		otherCipherSuites = append(otherCipherSuites, cipher.ID)
@@ -1158,24 +1159,24 @@ func TestCipherSuites(t *testing.T) {
 		{
 			name:     "server default / client all",
 			success:  true,
-			versions: []uint16{tls.VersionTLS12, tls.VersionGMSSL},
+			versions: []uint16{tls.VersionGMSSL},
 		},
-		{
-			name:          "server default / client match",
-			clientCiphers: comm.DefaultTLSCipherSuites,
-			success:       true,
-			// Skip TLS1.3 as it ignores the Fabric DefaultCipherSuites
-			// https://github.com/golang/go/issues/29349
-			versions: []uint16{tls.VersionTLS12},
-		},
-		{
-			name:          "server default / client no match",
-			clientCiphers: otherCipherSuites,
-			success:       false,
-			// Skip TLS1.3 as it ignores the Fabric DefaultCipherSuites
-			// https://github.com/golang/go/issues/29349
-			versions: []uint16{tls.VersionTLS12},
-		},
+		// {
+		// 	name:          "server default / client match",
+		// 	clientCiphers: comm.DefaultTLSCipherSuites,
+		// 	success:       true,
+		// 	// Skip TLS1.3 as it ignores the Fabric DefaultCipherSuites
+		// 	// https://github.com/golang/go/issues/29349
+		// 	versions: []uint16{tls.VersionTLS12},
+		// },
+		// {
+		// 	name:          "server default / client no match",
+		// 	clientCiphers: otherCipherSuites,
+		// 	success:       false,
+		// 	// Skip TLS1.3 as it ignores the Fabric DefaultCipherSuites
+		// 	// https://github.com/golang/go/issues/29349
+		// 	versions: []uint16{tls.VersionTLS12},
+		// },
 	}
 
 	// create our listener
@@ -1193,6 +1194,7 @@ func TestCipherSuites(t *testing.T) {
 
 			for _, tlsVersion := range test.versions {
 				tlsConfig := &tls.Config{
+					GMSupport:    &tls.GMSupport{},
 					RootCAs:      certPool,
 					CipherSuites: test.clientCiphers,
 					MinVersion:   tlsVersion,

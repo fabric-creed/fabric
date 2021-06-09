@@ -105,10 +105,10 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 			}
 			// gmtls support
 			if _, gmFlag := cert.PrivateKey.(*sm2.PrivateKey); gmFlag {
+				tlsServerLogger.Info("======Server Use GM TLS=====")
 				grpcServer.tlsConfig.GMSupport = &tls.GMSupport{}
 				grpcServer.tlsConfig.MinVersion = tls.VersionGMSSL
-				secureConfig.CipherSuites = DefaultGMTLSCipherSuites
-				tlsServerLogger.Info("======Server Use GM TLS=====")
+				grpcServer.tlsConfig.CipherSuites = DefaultGMTLSCipherSuites
 				// grpcServer.tlsConfig.ClientAuth = tls.NoClientCert
 			}
 
