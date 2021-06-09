@@ -9,8 +9,6 @@ package comm_test
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -21,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cetcxinlian/cryptogm/tls"
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/hyperledger/fabric/common/crypto/tlsgen"
 	"github.com/hyperledger/fabric/internal/pkg/comm"
 	"github.com/hyperledger/fabric/internal/pkg/comm/testpb"
@@ -66,7 +66,7 @@ VQQLDAtIeXBlcmxlZGdlcjESMBAGA1UEAwwJbG9jYWxob3N0MFkwEwYHKoZIzj0C
 var testOrgs = []testOrg{}
 
 func init() {
-	//load up crypto material for test orgs
+	// load up crypto material for test orgs
 	for i := 1; i <= numOrgs; i++ {
 		testOrg, err := loadOrg(i)
 		if err != nil {
@@ -103,17 +103,17 @@ func (esss *emptyServiceServer) EmptyStream(stream testpb.EmptyService_EmptyStre
 func invokeEmptyCall(address string, dialOptions ...grpc.DialOption) (*testpb.Empty, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
-	//create GRPC client conn
+	// create GRPC client conn
 	clientConn, err := grpc.DialContext(ctx, address, dialOptions...)
 	if err != nil {
 		return nil, err
 	}
 	defer clientConn.Close()
 
-	//create GRPC client
+	// create GRPC client
 	client := testpb.NewEmptyServiceClient(clientConn)
 
-	//invoke service
+	// invoke service
 	empty, err := client.EmptyCall(context.Background(), new(testpb.Empty))
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func invokeEmptyCall(address string, dialOptions ...grpc.DialOption) (*testpb.Em
 func invokeEmptyStream(address string, dialOptions ...grpc.DialOption) (*testpb.Empty, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
-	//create GRPC client conn
+	// create GRPC client conn
 	clientConn, err := grpc.DialContext(ctx, address, dialOptions...)
 	if err != nil {
 		return nil, err
@@ -398,7 +398,7 @@ func TestNewGRPCServerInvalidParameters(t *testing.T) {
 		"127.0.0.1:1BBB",
 		comm.ServerConfig{SecOpts: comm.SecureOptions{UseTLS: false}},
 	)
-	//check for possible errors based on platform and Go release
+	// check for possible errors based on platform and Go release
 	msgs := []string{
 		"listen tcp: lookup tcp/1BBB: nodename nor servname provided, or not known",
 		"listen tcp: unknown port tcp/1BBB",
@@ -600,7 +600,7 @@ func TestNewSecureGRPCServer(t *testing.T) {
 	// register the GRPC test server
 	testpb.RegisterEmptyServiceServer(srv.Server(), &emptyServiceServer{})
 
-	//start the server
+	// start the server
 	go srv.Start()
 	defer srv.Stop()
 
@@ -621,7 +621,7 @@ func TestNewSecureGRPCServer(t *testing.T) {
 	// Test TLS versions which should be valid
 	tlsVersions := map[string]uint16{
 		"TLS12": tls.VersionTLS12,
-		"TLS13": tls.VersionTLS13,
+		"TLS13": tls.VersionGMSSL,
 	}
 	for name, tlsVersion := range tlsVersions {
 		tlsVersion := tlsVersion
@@ -750,7 +750,7 @@ func TestWithSignedRootCertificates(t *testing.T) {
 	// register the GRPC test server
 	testpb.RegisterEmptyServiceServer(srv.Server(), &emptyServiceServer{})
 
-	//start the server
+	// start the server
 	go srv.Start()
 	defer srv.Stop()
 
@@ -852,7 +852,7 @@ func TestWithSignedIntermediateCertificates(t *testing.T) {
 func runMutualAuth(t *testing.T, servers []testServer, trustedClients, unTrustedClients []*tls.Config) error {
 	// loop through all the test servers
 	for i := 0; i < len(servers); i++ {
-		//create listener
+		// create listener
 		lis, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
 			return err
@@ -868,7 +868,7 @@ func runMutualAuth(t *testing.T, servers []testServer, trustedClients, unTrusted
 		// MutualTLSRequired should be true
 		assert.Equal(t, srv.MutualTLSRequired(), true)
 
-		//register the GRPC test server and start the GRPCServer
+		// register the GRPC test server and start the GRPCServer
 		testpb.RegisterEmptyServiceServer(srv.Server(), &emptyServiceServer{})
 		go srv.Start()
 		defer srv.Stop()
@@ -1133,21 +1133,21 @@ func TestCipherSuites(t *testing.T) {
 			UseTLS:      true,
 		}}
 
-	fabricDefaultCipherSuite := func(cipher uint16) bool {
-		for _, defaultCipher := range comm.DefaultTLSCipherSuites {
-			if cipher == defaultCipher {
-				return true
-			}
-		}
-		return false
-	}
+	// fabricDefaultCipherSuite := func(cipher uint16) bool {
+	// 	for _, defaultCipher := range comm.DefaultTLSCipherSuites {
+	// 		if cipher == defaultCipher {
+	// 			return true
+	// 		}
+	// 	}
+	// 	return false
+	// }
 
 	var otherCipherSuites []uint16
-	for _, cipher := range append(tls.CipherSuites(), tls.InsecureCipherSuites()...) {
-		if !fabricDefaultCipherSuite(cipher.ID) {
-			otherCipherSuites = append(otherCipherSuites, cipher.ID)
-		}
-	}
+	// for _, cipher := range append(tls.CipherSuites(), tls.InsecureCipherSuites()...) {
+	// 	if !fabricDefaultCipherSuite(cipher.ID) {
+	// 		otherCipherSuites = append(otherCipherSuites, cipher.ID)
+	// 	}
+	// }
 
 	var tests = []struct {
 		name          string
@@ -1158,7 +1158,7 @@ func TestCipherSuites(t *testing.T) {
 		{
 			name:     "server default / client all",
 			success:  true,
-			versions: []uint16{tls.VersionTLS12, tls.VersionTLS13},
+			versions: []uint16{tls.VersionTLS12, tls.VersionGMSSL},
 		},
 		{
 			name:          "server default / client match",

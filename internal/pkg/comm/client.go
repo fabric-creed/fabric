@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/pem"
 	"github.com/cetcxinlian/cryptogm/sm2"
+	"github.com/hyperledger/fabric/common/flogging"
 	"time"
 
 	"github.com/cetcxinlian/cryptogm/tls"
@@ -17,6 +18,11 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
+)
+
+var (
+	// Logger for TLS client connections
+	tlsClientLogger = flogging.MustGetLogger("comm.tls.client")
 )
 
 type GRPCClient struct {
@@ -85,7 +91,6 @@ func (client *GRPCClient) parseSecureOptions(opts SecureOptions) error {
 			}
 		}
 
-		// add by suyunlong, client support GMT0024
 		block, _ := pem.Decode(opts.ServerRootCAs[0])
 		if block != nil {
 			caCert, err := x509.ParseCertificate(block.Bytes)
@@ -94,8 +99,9 @@ func (client *GRPCClient) parseSecureOptions(opts SecureOptions) error {
 			}
 			_, ok := caCert.PublicKey.(*sm2.PublicKey)
 			if ok {
+				tlsClientLogger.Info("======Client Use GM TLS======")
 				client.tlsConfig.GMSupport = &tls.GMSupport{}
-				client.tlsConfig.MinVersion = 0
+				client.tlsConfig.MinVersion = tls.VersionGMSSL
 			}
 		}
 	}

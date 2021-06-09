@@ -7,12 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package comm
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
 
+	"github.com/cetcxinlian/cryptogm/tls"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +21,7 @@ const (
 	numChildOrgs = 2
 )
 
-//string for cert filenames
+// string for cert filenames
 var (
 	orgCACert   = filepath.Join("testdata", "certs", "Org%d-cert.pem")
 	childCACert = filepath.Join("testdata", "certs", "Org%d-child%d-cert.pem")

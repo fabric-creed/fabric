@@ -8,6 +8,7 @@ package comm
 
 import (
 	"github.com/cetcxinlian/cryptogm/sm2"
+	"github.com/hyperledger/fabric/common/flogging"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -20,6 +21,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+)
+
+var (
+	// Logger for TLS client connections
+	tlsServerLogger = flogging.MustGetLogger("comm.tls.server")
 )
 
 type GRPCServer struct {
@@ -84,12 +90,7 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 
 			// set up our TLS config
 			if len(secureConfig.CipherSuites) == 0 {
-				// gmtls support
-				if _, ok := cert.PrivateKey.(*sm2.PrivateKey); !ok {
-					secureConfig.CipherSuites = DefaultTLSCipherSuites
-				} else {
-					secureConfig.CipherSuites = DefaultGMTLSCipherSuites
-				}
+				secureConfig.CipherSuites = DefaultTLSCipherSuites
 			}
 			getCert := func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
 				cert := grpcServer.serverCertificate.Load().(tls.Certificate)
@@ -102,6 +103,14 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 				SessionTicketsDisabled: true,
 				CipherSuites:           secureConfig.CipherSuites,
 			}
+			// gmtls support
+			if _, gmFlag := cert.PrivateKey.(*sm2.PrivateKey); gmFlag {
+				grpcServer.tlsConfig.GMSupport = &tls.GMSupport{}
+				grpcServer.tlsConfig.MinVersion = tls.VersionGMSSL
+				secureConfig.CipherSuites = DefaultGMTLSCipherSuites
+				tlsServerLogger.Info("======Server Use GM TLS=====")
+				// grpcServer.tlsConfig.ClientAuth = tls.NoClientCert
+			}
 
 			if serverConfig.SecOpts.TimeShift > 0 {
 				timeShift := serverConfig.SecOpts.TimeShift
@@ -110,13 +119,6 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 				}
 			}
 			grpcServer.tlsConfig.ClientAuth = tls.RequestClientCert
-			// gmtls support
-			if _, gmFlag := cert.PrivateKey.(*sm2.PrivateKey); gmFlag {
-				grpcServer.tlsConfig.GMSupport = &tls.GMSupport{}
-				grpcServer.tlsConfig.MinVersion = 0
-				// grpcServer.tlsConfig.ClientAuth = tls.NoClientCert
-			}
-
 			// check if client authentication is required
 			if secureConfig.RequireClientCert {
 				// require TLS client auth
@@ -135,7 +137,7 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 			}
 
 			// create credentials and add to server options
-			creds := NewServerTransportCredentials(grpcServer.tlsConfig, serverConfig.Logger)
+			creds := NewServerTransportCredentials(NewTLSConfig(grpcServer.tlsConfig), serverConfig.Logger)
 			serverOpts = append(serverOpts, grpc.Creds(creds))
 		} else {
 			return nil, errors.New("serverConfig.SecOpts must contain both Key and Certificate when UseTLS is true")

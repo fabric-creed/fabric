@@ -9,8 +9,6 @@ package comm_test
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"io/ioutil"
 	"net"
 	"path/filepath"
@@ -19,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cetcxinlian/cryptogm/tls"
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/crypto/tlsgen"
 	"github.com/hyperledger/fabric/common/flogging"
@@ -505,7 +505,7 @@ func TestSetMessageSize(t *testing.T) {
 			callCtx := context.Background()
 			callCtx, cancel := context.WithTimeout(callCtx, testTimeout)
 			defer cancel()
-			//invoke service
+			// invoke service
 			echo := &testpb.Echo{
 				Payload: []byte{0, 0, 0, 0, 0},
 			}

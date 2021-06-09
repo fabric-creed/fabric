@@ -8,16 +8,15 @@ package comm_test
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net"
 	"path/filepath"
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/cetcxinlian/cryptogm/tls"
+	"github.com/cetcxinlian/cryptogm/x509"
 	"github.com/hyperledger/fabric/common/flogging/floggingtest"
 	"github.com/hyperledger/fabric/internal/pkg/comm"
 	"github.com/stretchr/testify/assert"
@@ -174,4 +173,74 @@ func TestSetClientCAs(t *testing.T) {
 	config.SetClientCAs(certPool)
 
 	assert.NotNil(t, config.Config().ClientCAs, "The CertPools' should not be the same")
+}
+
+func TestGMCreds(t *testing.T) {
+	t.Parallel()
+
+	caPEM, err := ioutil.ReadFile(filepath.Join("testdata", "gm", "tls", "ca.crt"))
+	if err != nil {
+		t.Fatalf("failed to read root certificate: %v", err)
+	}
+	certPool := x509.NewCertPool()
+	ok := certPool.AppendCertsFromPEM(caPEM)
+	if !ok {
+		t.Fatalf("failed to create certPool")
+	}
+	cert, err := tls.LoadX509KeyPair(
+		filepath.Join("testdata", "gm", "tls", "server.crt"),
+		filepath.Join("testdata", "gm", "tls", "server.key"),
+	)
+	if err != nil {
+		t.Fatalf("failed to load TLS certificate [%s]", err)
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		GMSupport:    &tls.GMSupport{},
+	}
+
+	config := comm.NewTLSConfig(tlsConfig)
+
+	logger, _ := floggingtest.NewTestLogger(t)
+
+	creds := comm.NewServerTransportCredentials(config, logger)
+	_, _, err = creds.ClientHandshake(context.Background(), "", nil)
+	assert.EqualError(t, err, comm.ErrClientHandshakeNotImplemented.Error())
+	err = creds.OverrideServerName("")
+	assert.EqualError(t, err, comm.ErrOverrideHostnameNotSupported.Error())
+	assert.Equal(t, "1.2", creds.Info().SecurityVersion)
+	assert.Equal(t, "tls", creds.Info().SecurityProtocol)
+
+	lis, err := net.Listen("tcp", "orderer.example.com:0")
+	if err != nil {
+		t.Fatalf("failed to start listener [%s]", err)
+	}
+	defer lis.Close()
+
+	_, port, err := net.SplitHostPort(lis.Addr().String())
+	assert.NoError(t, err)
+	addr := net.JoinHostPort("orderer.example.com", port)
+
+	handshake := func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		conn, err := lis.Accept()
+		if err != nil {
+			t.Logf("failed to accept connection [%s]", err)
+		}
+		_, _, err = creds.ServerHandshake(conn)
+		if err != nil {
+			t.Logf("ServerHandshake error [%s]", err)
+		}
+	}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go handshake(wg)
+	_, err = tls.Dial("tcp", addr, &tls.Config{
+		RootCAs:   certPool,
+		GMSupport: &tls.GMSupport{},
+	})
+	wg.Wait()
+	assert.NoError(t, err)
 }

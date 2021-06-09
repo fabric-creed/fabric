@@ -28,30 +28,30 @@ var (
 	alpnProtoStr = []string{"h2"}
 
 	// Logger for TLS client connections
-	tlsClientLogger = flogging.MustGetLogger("comm.tls")
+	tlsLogger = flogging.MustGetLogger("comm.tls")
 )
 
 // NewServerTransportCredentials returns a new initialized
 // grpc/credentials.TransportCredentials
 func NewServerTransportCredentials(
-	serverConfig *tls.Config,
+	serverConfig *TLSConfig,
 	logger *flogging.FabricLogger) credentials.TransportCredentials {
 	// NOTE: unlike the default grpc/credentials implementation, we do not
 	// clone the tls.Config which allows us to update it dynamically
-	serverConfig.NextProtos = alpnProtoStr
+	serverConfig.config.NextProtos = alpnProtoStr
 	// GMTLS support
-	if serverConfig.GMSupport != nil {
-		serverConfig.MinVersion = tls.VersionGMSSL
+	if serverConfig.config.GMSupport != nil {
+		serverConfig.config.MinVersion = tls.VersionGMSSL
 	} else {
-		serverConfig.MinVersion = tls.VersionTLS12
+		serverConfig.config.MinVersion = tls.VersionTLS12
 	}
 
 	if logger == nil {
-		logger = tlsClientLogger
+		logger = tlsLogger
 	}
 
 	return &serverCreds{
-		serverConfig: serverConfig,
+		serverConfig: serverConfig.config,
 		logger:       logger}
 }
 
@@ -127,7 +127,7 @@ func (sc *serverCreds) Info() credentials.ProtocolInfo {
 
 // Clone makes a copy of this TransportCredentials.
 func (sc *serverCreds) Clone() credentials.TransportCredentials {
-	return NewServerTransportCredentials(sc.serverConfig, sc.logger)
+	return NewServerTransportCredentials(NewTLSConfig(sc.serverConfig), sc.logger)
 }
 
 // OverrideServerName overrides the server name used to verify the hostname
@@ -150,7 +150,7 @@ func (dtc *DynamicClientCredentials) latestConfig() *tls.Config {
 }
 
 func (dtc *DynamicClientCredentials) ClientHandshake(ctx context.Context, authority string, rawConn net.Conn) (net.Conn, credentials.AuthInfo, error) {
-	l := tlsClientLogger.With("remote address", rawConn.RemoteAddr().String())
+	l := tlsLogger.With("remote address", rawConn.RemoteAddr().String())
 	creds := credentials.NewTLS(dtc.latestConfig())
 	start := time.Now()
 	conn, auth, err := creds.ClientHandshake(ctx, authority, rawConn)
