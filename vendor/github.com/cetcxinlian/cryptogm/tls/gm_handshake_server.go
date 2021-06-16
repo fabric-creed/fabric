@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cetcxinlian/cryptogm/x509"
+	"github.com/cetcxinlian/cryptogm/sm2"
 	"io"
 	"sync/atomic"
 )
@@ -696,7 +697,7 @@ func (hs *serverHandshakeStateGM) processCertsFromClient(certificates [][]byte) 
 
 	var pub crypto.PublicKey
 	switch key := certs[0].PublicKey.(type) {
-	case *ecdsa.PublicKey, *rsa.PublicKey:
+	case *ecdsa.PublicKey, *rsa.PublicKey, *sm2.PublicKey:
 		pub = key
 	default:
 		c.sendAlert(alertUnsupportedCertificate)

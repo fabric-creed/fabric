@@ -36,9 +36,9 @@ func makeClientHelloGM(config *Config) (*clientHelloMsg, error) {
 	}
 
 	hello := &clientHelloMsg{
-		vers:                         config.GMSupport.GetVersion(),
-		compressionMethods:           []uint8{compressionNone},
-		random:                       make([]byte, 32),
+		vers:               config.GMSupport.GetVersion(),
+		compressionMethods: []uint8{compressionNone},
+		random:             make([]byte, 32),
 	}
 	possibleCipherSuites := getCipherSuites(config)
 	hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
@@ -83,7 +83,7 @@ func (hs *clientHandshakeStateGM) handshake() error {
 		return unexpectedMessageError(hs.serverHello, msg)
 	}
 
-	if hs.serverHello.vers != VersionGMSSL{
+	if hs.serverHello.vers != VersionGMSSL {
 		hs.c.sendAlert(alertProtocolVersion)
 		return fmt.Errorf("tls: server selected unsupported protocol version %x, while expecting %x", hs.serverHello.vers, VersionGMSSL)
 	}
@@ -182,10 +182,10 @@ func (hs *clientHandshakeStateGM) doFullHandshake() error {
 
 	// mod by syl only one cert
 	// Thanks to dual certificates mechanism, length of certificates in GMT0024 must great than 2
-	//if len(certMsg.certificates) < 2{
+	// if len(certMsg.certificates) < 2{
 	//	c.sendAlert(alertInsufficientSecurity)
 	//	return fmt.Errorf("tls: length of certificates in GMT0024 must great than 2")
-	//}
+	// }
 
 	hs.finishedHash.Write(certMsg.marshal())
 
@@ -201,28 +201,28 @@ func (hs *clientHandshakeStateGM) doFullHandshake() error {
 			}
 
 			// mod by syl below
-			//if cert.SignatureAlgorithm != x509.SM2WithSM3{
+			// if cert.SignatureAlgorithm != x509.SM2WithSM3{
 			//	c.sendAlert(alertUnsupportedCertificate)
 			//	return fmt.Errorf("tls: SignatureAlgorithm of the certificate[%d] is not supported, actual:%s, expect:SM2WITHSM3", i, cert.SignatureAlgorithm.String())
-			//}
-			//if cert.PublicKeyAlgorithm != x509.SM2 {
+			// }
+			// if cert.PublicKeyAlgorithm != x509.SM2 {
 			//	c.sendAlert(alertUnsupportedCertificate)
 			//	return fmt.Errorf("tls: PublicKeyAlgorithm of the certificate[%d] is not supported, actual:%s, expect:SM2", i, []string{"unkown", "RSA", "DSA", "ECDSA", "SM2"}[int(cert.PublicKeyAlgorithm)])
-			//}
-			////cert[0] is for signature while cert[1] is for encipher, refer to  GMT0024
-			////check key usage
-			//switch i {
-			//case 0:
+			// }
+			// //cert[0] is for signature while cert[1] is for encipher, refer to  GMT0024
+			// //check key usage
+			// switch i {
+			// case 0:
 			//	if cert.KeyUsage == 0 || (cert.KeyUsage & (x509.KeyUsageDigitalSignature | cert.KeyUsage&x509.KeyUsageContentCommitment)) == 0{
 			//		c.sendAlert(alertInsufficientSecurity)
 			//		return fmt.Errorf("tls: the keyusage of cert[0] does not exist or is not for KeyUsageDigitalSignature/KeyUsageContentCommitment, value:%d", cert.KeyUsage)
 			//	}
-			//case 1:
+			// case 1:
 			//	if cert.KeyUsage == 0 || (cert.KeyUsage & (x509.KeyUsageDataEncipherment | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement))==0{
 			//		c.sendAlert(alertInsufficientSecurity)
 			//		return fmt.Errorf("tls: the keyusage of cert[1] does not exist or is not for KeyUsageDataEncipherment/KeyUsageKeyEncipherment/KeyUsageKeyAgreement, value:%d", cert.KeyUsage)
 			//	}
-			//}
+			// }
 
 			certs[i] = cert
 		}
@@ -238,7 +238,7 @@ func (hs *clientHandshakeStateGM) doFullHandshake() error {
 				opts.Roots = x509.NewCertPool()
 			}
 
-			for _,rootca := range getCAs() {
+			for _, rootca := range getCAs() {
 				opts.Roots.AddCert(rootca)
 			}
 			for i, cert := range certs {
@@ -290,9 +290,9 @@ func (hs *clientHandshakeStateGM) doFullHandshake() error {
 	}
 
 	keyAgreement := hs.suite.ka(c.vers)
-	if ka,ok := keyAgreement.(*eccKeyAgreementGM); ok{
+	if ka, ok := keyAgreement.(*eccKeyAgreementGM); ok {
 		// mod by syl only one cert
-		//ka.encipherCert = c.peerCertificates[1]
+		// ka.encipherCert = c.peerCertificates[1]
 		ka.encipherCert = c.peerCertificates[0]
 	}
 
@@ -349,7 +349,7 @@ func (hs *clientHandshakeStateGM) doFullHandshake() error {
 	}
 
 	// mod by syl only one cert
-	//preMasterSecret, ckx, err := keyAgreement.generateClientKeyExchange(c.config, hs.hello, c.peerCertificates[1])
+	// preMasterSecret, ckx, err := keyAgreement.generateClientKeyExchange(c.config, hs.hello, c.peerCertificates[1])
 	preMasterSecret, ckx, err := keyAgreement.generateClientKeyExchange(c.config, hs.hello, c.peerCertificates[0])
 	if err != nil {
 		c.sendAlert(alertInternalError)
@@ -585,18 +585,18 @@ func (hs *clientHandshakeStateGM) sendFinished(out []byte) error {
 	return nil
 }
 
-//// tls11SignatureSchemes contains the signature schemes that we synthesise for
-//// a TLS <= 1.1 connection, based on the supported certificate types.
-//var tls11SignatureSchemes = []SignatureScheme{ECDSAWithP256AndSHA256, ECDSAWithP384AndSHA384, ECDSAWithP521AndSHA512, PKCS1WithSHA256, PKCS1WithSHA384, PKCS1WithSHA512, PKCS1WithSHA1}
+// // tls11SignatureSchemes contains the signature schemes that we synthesise for
+// // a TLS <= 1.1 connection, based on the supported certificate types.
+// var tls11SignatureSchemes = []SignatureScheme{ECDSAWithP256AndSHA256, ECDSAWithP384AndSHA384, ECDSAWithP521AndSHA512, PKCS1WithSHA256, PKCS1WithSHA384, PKCS1WithSHA512, PKCS1WithSHA1}
 //
-//const (
+// const (
 //	// tls11SignatureSchemesNumECDSA is the number of initial elements of
 //	// tls11SignatureSchemes that use ECDSA.
 //	tls11SignatureSchemesNumECDSA = 3
 //	// tls11SignatureSchemesNumRSA is the number of trailing elements of
 //	// tls11SignatureSchemes that use RSA.
 //	tls11SignatureSchemesNumRSA = 4
-//)
+// )
 
 func (hs *clientHandshakeStateGM) getCertificate(certReq *certificateRequestMsgGM) (*Certificate, error) {
 	c := hs.c
@@ -662,4 +662,3 @@ findCert:
 	// No acceptable certificate found. Don't send a certificate.
 	return new(Certificate), nil
 }
-

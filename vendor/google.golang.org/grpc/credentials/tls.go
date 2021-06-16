@@ -157,6 +157,10 @@ func NewTLS(c *tls.Config) TransportCredentials {
 // it will override the virtual host name of authority (e.g. :authority header
 // field) in requests.
 func NewClientTLSFromCert(cp *x509.CertPool, serverNameOverride string) TransportCredentials {
+	_, ok := cp.GetCerts()[0].PublicKey.(*sm2.PublicKey)
+	if ok {
+		return NewTLS(&tls.Config{ServerName: serverNameOverride, RootCAs: cp, GMSupport: &tls.GMSupport{}})
+	}
 	return NewTLS(&tls.Config{ServerName: serverNameOverride, RootCAs: cp})
 }
 
@@ -188,6 +192,10 @@ func NewClientTLSFromFile(certFile, serverNameOverride string) (TransportCredent
 
 // NewServerTLSFromCert constructs TLS credentials from the input certificate for server.
 func NewServerTLSFromCert(cert *tls.Certificate) TransportCredentials {
+	_, ok := cert.PrivateKey.(*sm2.PrivateKey)
+	if ok {
+		return NewTLS(&tls.Config{Certificates: []tls.Certificate{*cert}, GMSupport: &tls.GMSupport{}})
+	}
 	return NewTLS(&tls.Config{Certificates: []tls.Certificate{*cert}})
 }
 
@@ -240,6 +248,8 @@ var cipherSuiteLookup = map[uint16]string{
 	tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256:   "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
 	tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305:    "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",
 	tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305:  "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305",
+	tls.GMTLS_ECDHE_SM2_WITH_SM4_SM3:            "GMTLS_ECDHE_SM2_WITH_SM4_SM3",
+	tls.GMTLS_SM2_WITH_SM4_SM3:                  "GMTLS_SM2_WITH_SM4_SM3",
 }
 
 // cloneTLSConfig returns a shallow clone of the exported
