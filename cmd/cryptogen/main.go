@@ -206,7 +206,7 @@ var (
 	gen           = app.Command("generate", "Generate key material")
 	outputDir     = gen.Flag("output", "The output directory in which to place artifacts").Default("crypto-config").String()
 	genConfigFile = gen.Flag("config", "The configuration template to use").File()
-	sm2GenFlag    = gen.Flag("sm2", "enable sm2 cryptographic").Default("true").Bool()
+	sm2GenFlag    = gen.Flag("sm2", "enable sm2 cryptographic").Default("false").Bool()
 
 	showtemplate = app.Command("showtemplate", "Show the default configuration template")
 
@@ -214,7 +214,7 @@ var (
 	ext           = app.Command("extend", "Extend existing network")
 	inputDir      = ext.Flag("input", "The input directory in which existing network place").Default("crypto-config").String()
 	extConfigFile = ext.Flag("config", "The configuration template to use").File()
-	sm2ExtFlag    = ext.Flag("sm2", "enable sm2 cryptographic").Default("true").Bool()
+	sm2ExtFlag    = ext.Flag("sm2", "enable sm2 cryptographic").Default("false").Bool()
 )
 
 func main() {
